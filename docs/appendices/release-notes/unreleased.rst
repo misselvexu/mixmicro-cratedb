@@ -56,6 +56,9 @@ None
 Changes
 =======
 
+- Improved the handling of constant join criteria to make sure it can be
+  pushed to the collect phase when possible. 
+
 - Implemented cancelling requests section of PostgreSQL wire protocol.
 
 - Added the :ref:`Logical Replication <administration-logical-replication>`

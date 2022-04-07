@@ -75,6 +75,7 @@ public class NestedLoopJoin implements LogicalPlan {
     private final Map<LogicalPlan, SelectSymbol> dependencies;
     private boolean orderByWasPushedDown = false;
     private boolean rewriteFilterOnOuterJoinToInnerJoinDone = false;
+    private boolean joinConditionOptimised = false;
 
     NestedLoopJoin(LogicalPlan lhs,
                    LogicalPlan rhs,
@@ -104,10 +105,24 @@ public class NestedLoopJoin implements LogicalPlan {
                           boolean isFiltered,
                           AnalyzedRelation topMostLeftRelation,
                           boolean orderByWasPushedDown,
-                          boolean rewriteFilterOnOuterJoinToInnerJoinDone) {
+                          boolean rewriteFilterOnOuterJoinToInnerJoinDone,
+                          boolean joinConditionOptimised) {
         this(lhs, rhs, joinType, joinCondition, isFiltered, topMostLeftRelation);
         this.orderByWasPushedDown = orderByWasPushedDown;
         this.rewriteFilterOnOuterJoinToInnerJoinDone = rewriteFilterOnOuterJoinToInnerJoinDone;
+        this.joinConditionOptimised = joinConditionOptimised;
+    }
+
+    public LogicalPlan lhs() {
+        return lhs;
+    }
+
+    public LogicalPlan rhs() {
+        return rhs;
+    }
+
+    public boolean isJoinConditionOptimised() {
+        return joinConditionOptimised;
     }
 
     public boolean isRewriteFilterOnOuterJoinToInnerJoinDone() {
@@ -254,7 +269,8 @@ public class NestedLoopJoin implements LogicalPlan {
             isFiltered,
             topMostLeftRelation,
             orderByWasPushedDown,
-            rewriteFilterOnOuterJoinToInnerJoinDone
+            rewriteFilterOnOuterJoinToInnerJoinDone,
+            joinConditionOptimised
         );
     }
 
@@ -283,7 +299,8 @@ public class NestedLoopJoin implements LogicalPlan {
             isFiltered,
             topMostLeftRelation,
             orderByWasPushedDown,
-            rewriteFilterOnOuterJoinToInnerJoinDone
+            rewriteFilterOnOuterJoinToInnerJoinDone,
+            joinConditionOptimised
         );
     }
 
@@ -318,7 +335,8 @@ public class NestedLoopJoin implements LogicalPlan {
                 isFiltered,
                 topMostLeftRelation,
                 orderByWasPushedDown,
-                rewriteFilterOnOuterJoinToInnerJoinDone
+                rewriteFilterOnOuterJoinToInnerJoinDone,
+                joinConditionOptimised
             )
         );
     }

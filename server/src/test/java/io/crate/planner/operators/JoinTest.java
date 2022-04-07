@@ -28,6 +28,7 @@ import static io.crate.planner.operators.LogicalPlannerTest.isPlan;
 import static io.crate.testing.SymbolMatchers.isInputColumn;
 import static io.crate.testing.SymbolMatchers.isReference;
 import static io.crate.testing.TestingHelpers.isSQL;
+import static io.crate.testing.TestingHelpers.printedTable;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -42,6 +43,7 @@ import java.util.Set;
 
 import org.elasticsearch.common.Randomness;
 import org.hamcrest.Matchers;
+import org.hamcrest.core.Is;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,6 +69,8 @@ import io.crate.statistics.TableStats;
 import io.crate.test.integration.CrateDummyClusterServiceUnitTest;
 import io.crate.testing.SQLExecutor;
 import io.crate.testing.T3;
+import io.crate.testing.UseHashJoins;
+import io.crate.testing.UseJdbc;
 
 public class JoinTest extends CrateDummyClusterServiceUnitTest {
 
@@ -610,5 +614,22 @@ public class JoinTest extends CrateDummyClusterServiceUnitTest {
 
         Object plan = executor.plan(statement);
         assertThat(plan, Matchers.instanceOf(Join.class));
+    }
+
+    /**
+     * https://github.com/crate/crate/issues/11404
+     */
+    @Test
+    public void test_constant_join_criteria_handling() throws Exception {
+        var executor = SQLExecutor.builder(clusterService, 2, Randomness.get(), List.of()).build();
+
+        LogicalPlan logicalPlan = executor.logicalPlan(
+            "select doc.t1.*, doc.t2.b from doc.t1 join doc.t2 on doc.t1.x = doc.t2.y and doc.t2.b = 'abc'");
+
+        assertThat(logicalPlan, is(isPlan(
+            "Eval[a, x, i, b]\n" +
+            "  └ HashJoin[(x = y)]\n" +
+            "    ├ Collect[doc.t1 | [a, x, i] | true]\n" +
+            "    └ Collect[doc.t2 | [b, y] | (b = 'abc')]")));
     }
 }
