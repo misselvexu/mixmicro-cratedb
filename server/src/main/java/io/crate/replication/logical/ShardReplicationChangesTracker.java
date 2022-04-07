@@ -358,7 +358,7 @@ public class ShardReplicationChangesTracker implements Closeable {
                 public void onFailure(Exception e) {
                     var msg = String.format(Locale.ENGLISH, "[%s] Changes cannot be replayed, tracking will stop", shardId);
                     LOGGER.error(msg, e);
-                    onFailure.accept(new RuntimeException(msg));
+                    onFailure.accept(e);
                 }
             };
             localClient.execute(
