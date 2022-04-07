@@ -108,6 +108,12 @@ public class Schemas extends AbstractLifecycleComponent implements Iterable<Sche
     }
 
     public TableInfo resolveTableInfo(QualifiedName ident, Operation operation, User user, SearchPath searchPath) {
+        var tableInfo = resolveTableInfo(ident, user, searchPath);
+        Operation.blockedRaiseException(tableInfo, operation);
+        return tableInfo;
+    }
+
+    public TableInfo resolveTableInfo(QualifiedName ident, User user, SearchPath searchPath) {
         String identSchema = schemaName(ident);
         String tableName = relationName(ident);
 
@@ -142,7 +148,6 @@ public class Schemas extends AbstractLifecycleComponent implements Iterable<Sche
                 }
             }
         }
-        Operation.blockedRaiseException(tableInfo, operation);
         return tableInfo;
     }
 

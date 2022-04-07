@@ -22,6 +22,7 @@
 package io.crate.analyze;
 
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -38,6 +39,7 @@ import io.crate.metadata.blob.BlobTableInfo;
 import io.crate.metadata.doc.DocTableInfo;
 import io.crate.metadata.table.Operation;
 import io.crate.metadata.table.TableInfo;
+import io.crate.replication.logical.LogicalReplicationService;
 import io.crate.sql.tree.DropBlobTable;
 import io.crate.sql.tree.DropTable;
 import io.crate.sql.tree.QualifiedName;
@@ -48,10 +50,12 @@ class DropTableAnalyzer {
 
     private final Schemas schemas;
     private final ClusterService clusterService;
+    private final LogicalReplicationService logicalReplicationService;
 
-    DropTableAnalyzer(ClusterService clusterService, Schemas schemas) {
+    DropTableAnalyzer(ClusterService clusterService, Schemas schemas, LogicalReplicationService logicalReplicationService) {
         this.clusterService = clusterService;
         this.schemas = schemas;
+        this.logicalReplicationService = logicalReplicationService;
     }
 
     public AnalyzedDropTable<DocTableInfo> analyze(DropTable<?> node, SessionContext sessionContext) {
@@ -77,8 +81,9 @@ class DropTableAnalyzer {
         boolean maybeCorrupt = false;
         try {
             //noinspection unchecked
-            tableInfo = (T) schemas.resolveTableInfo(name, Operation.DROP, sessionContext.sessionUser(), sessionContext.searchPath());
+            tableInfo = (T) schemas.resolveTableInfo(name, sessionContext.sessionUser(), sessionContext.searchPath());
             tableName = tableInfo.ident();
+            validateDropOperation(tableInfo);
         } catch (SchemaUnknownException | RelationUnknown e) {
             tableName = RelationName.of(name, sessionContext.searchPath().currentSchema());
             var metadata = clusterService.state().metadata();
@@ -109,5 +114,30 @@ class DropTableAnalyzer {
             );
         }
         return new AnalyzedDropTable<>(tableInfo, dropIfExists, tableName, maybeCorrupt);
+    }
+
+    private void validateDropOperation(TableInfo tableInfo) {
+        validateIfTableIsSubscribed(tableInfo.ident());
+        Operation.blockedRaiseException(tableInfo, Operation.DROP);
+    }
+
+    private void validateIfTableIsSubscribed(RelationName relationName) {
+        var subscriptions = logicalReplicationService.subscriptions();
+        for (var subscription : subscriptions.entrySet()) {
+            var subscriptionName = subscription.getKey();
+            var value = subscription.getValue();
+            if (value.relations().containsKey(relationName)) {
+                throw new OperationOnInaccessibleRelationException(
+                    relationName,
+                    String.format(
+                        Locale.ENGLISH,
+                        "The relation \"%s\" doesn't allow DROP operations, because it is included in the" +
+                        " logical replication subscription \"%s\".",
+                        relationName,
+                        subscriptionName
+                    )
+                );
+            }
+        }
     }
 }

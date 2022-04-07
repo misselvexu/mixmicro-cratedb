@@ -524,4 +524,19 @@ public class LogicalReplicationITest extends LogicalReplicationITestCase {
             }
         );
     }
+
+    @Test
+    public void test_drop_subscribed_table() throws Exception {
+        executeOnPublisher("CREATE TABLE t1 (id INT) WITH(" + defaultTableSettings() +")");
+        executeOnPublisher("INSERT INTO t1 (id) VALUES (1), (2), (3), (4)");
+
+        createPublication("pub1", false, List.of("t1"));
+        createSubscription("sub1", "pub1");
+
+        assertThrowsMatches(
+            () ->  executeOnSubscriber("DROP TABLE t1"),
+            OperationOnInaccessibleRelationException.class,
+            "The relation \"doc.t1\" doesn't allow DROP operations, because it is included in the logical replication subscription \"sub1\""
+        );
+    }
 }

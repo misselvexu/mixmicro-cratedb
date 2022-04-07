@@ -163,7 +163,7 @@ public class Analyzer {
                     LogicalReplicationService logicalReplicationService
     ) {
         this.relationAnalyzer = relationAnalyzer;
-        this.dropTableAnalyzer = new DropTableAnalyzer(clusterService, schemas);
+        this.dropTableAnalyzer = new DropTableAnalyzer(clusterService, schemas, logicalReplicationService);
         this.dropCheckConstraintAnalyzer = new DropCheckConstraintAnalyzer(schemas);
         this.userManager = userManager;
         this.createTableStatementAnalyzer = new CreateTableStatementAnalyzer(nodeCtx);
